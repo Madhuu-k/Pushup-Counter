@@ -6,7 +6,7 @@ It uses human pose estimation and joint-angle analysis to reliably count push-up
 The goal of this project was not just to count reps, but to understand how computer vision systems behave when exposed to real-world human movement.
 
 ## Demo
-(Video demo available in the LinkedIn post)
+[(Video demo available in the LinkedIn post)](https://www.linkedin.com/posts/madhuu-k_computervision-machinelearning-opencv-activity-7417543601787650048-gXSM?utm_source=share&utm_medium=member_desktop&rcm=ACoAAFEzjv4BzeGfH1FOhXAmj1glpZGFDeT8SaU)
 
 ## Tech Stack
 - Python
