@@ -1,6 +1,9 @@
+import threading
 import numpy as np
 import cv2
 import math
+import time
+import pyttsx3
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
@@ -20,6 +23,17 @@ stage = None   # Base Case
  
 DOWN_ANGLE = 110
 UP_ANGLE = 145
+
+warning_text = ""
+
+last_rep = None
+MIN_REP_DURATION = 1.0
+
+engine = pyttsx3.init()
+engine.setProperty('rate', 150)
+engine.setProperty('volume', 1.0)
+engine.say("Push up counter initialized")
+engine.runAndWait()
 
 
 def calculate_angle(a, b, c):
@@ -51,11 +65,13 @@ capture = cv2.VideoCapture(0)
 if not capture.isOpened():
     print("Camera is not opened")
     exit()
-    
+
+capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
 last_pose_landmarks = None
 pose_visible = False    
 down_frames = 0
-DOWN_FRAMES_REQUIRED = 4
+DOWN_FRAMES_REQUIRED = 2
 
 while True:
     ret, frame = capture.read()
@@ -63,7 +79,11 @@ while True:
         break
 
     h, w, _ = frame.shape
-
+    
+    START_BTN = (20, 20, 140, 70)
+    STOP_BTN = (160, 20, 280, 70)
+    
+    
     # Convert BGR → RGB
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
@@ -92,7 +112,15 @@ while True:
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
         continue
-
+    
+    if pose_visible and stage is not None:
+        # Incomplete ROM
+        if stage == "up" and angle < UP_ANGLE - 10:
+            warning_text = "Extend your arms fully at the top!"
+            
+        elif stage == "down" and angle > DOWN_ANGLE + 10:
+            warning_text = "Go lower!" 
+    
     land_marks = last_pose_landmarks[0]
 
     right_shoulder = land_marks[RIGHT_SHOULDER]
@@ -136,13 +164,13 @@ while True:
 
         if down_frames >= DOWN_FRAMES_REQUIRED and stage == "up":
             stage = "down"
+            # speak_async("Down")
 
     # When UP -> then rep counts
         if angle > UP_ANGLE and stage == "down":
             stage = "up"
             rep += 1
             down_frames = 0
-
 
     # =========================
     # DRAWING 
@@ -168,8 +196,27 @@ while True:
 
     cv2.putText(frame, f"Stage: {stage}", (10, 150),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+    
+    cv2.rectangle(frame, (START_BTN[0], START_BTN[1]), (START_BTN[2], START_BTN[3]), (0, 255, 0), -1)
+    cv2.putText(frame, "START", (35, 60), 
+                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+    
+    cv2.rectangle(frame, (STOP_BTN[0], STOP_BTN[1]), (STOP_BTN[2], STOP_BTN[3]), (0, 0, 255), -1)
+    cv2.putText(frame, "STOP", (175, 60), 
+                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
 
     cv2.imshow("Push Up Counter", frame)
+    
+    if warning_text:
+        cv2.putText(
+        frame,
+        warning_text,
+        (10, 200),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.9,
+        (0, 0, 255),
+        3
+    )
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
